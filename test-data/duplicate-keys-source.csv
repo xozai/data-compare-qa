@@ -1,0 +1,9 @@
+id,product,price,category
+1,Widget A,9.99,Hardware
+2,Widget B,14.99,Hardware
+3,Widget C,24.99,Software
+3,Widget C Duplicate,24.99,Software
+4,Widget D,4.99,Hardware
+5,Widget E,49.99,Software
+6,Widget F,7.99,Hardware
+7,Widget G,99.99,Software

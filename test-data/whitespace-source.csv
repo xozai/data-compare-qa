@@ -1,0 +1,9 @@
+id,name,status,code
+1, Alice ,active,  A001
+2,Bob  ,inactive,B002
+3,  Charlie,active,C003
+4,Diana,  pending  ,D004
+5,Eve ,active,  E005
+6,  Frank  ,inactive,F006
+7,Grace,active,G007
+8,Henry  ,pending,  H008

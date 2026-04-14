@@ -1,0 +1,11 @@
+id,status,priority,category,region
+1,Active,HIGH,Software,NORTH
+2,inactive,Low,hardware,south
+3,PENDING,Medium,SOFTWARE,East
+4,Active,high,Hardware,WEST
+5,INACTIVE,LOW,software,North
+6,pending,MEDIUM,HARDWARE,SOUTH
+7,active,High,Software,east
+8,Inactive,medium,Hardware,West
+9,ACTIVE,LOW,SOFTWARE,NORTH
+10,Pending,high,hardware,south
