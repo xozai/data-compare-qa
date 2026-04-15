@@ -233,7 +233,7 @@ function App() {
           )}
 
           {/* RESULTS STEP */}
-          {step === 'results' && result && (
+          {step === 'results' && result && source && target && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <button
@@ -243,7 +243,12 @@ function App() {
                   <ArrowLeft className="w-4 h-4" />
                   Back to Mapping
                 </button>
-                <ExportButtons result={result} />
+                <ExportButtons
+                  result={result}
+                  source={source}
+                  target={target}
+                  keyColumns={keyColumns}
+                />
               </div>
 
               <ResultsSummary result={result} />
