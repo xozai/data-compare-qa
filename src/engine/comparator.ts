@@ -1,6 +1,5 @@
 import type {
   DataRow,
-  ColumnMapping,
   ComparisonConfig,
   ComparisonResult,
   CellMismatch,

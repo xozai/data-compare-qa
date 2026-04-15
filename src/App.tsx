@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { FileUploader } from './components/upload/FileUploader';
 import { ColumnMapper } from './components/mapping/ColumnMapper';
 import { ResultsSummary } from './components/results/ResultsSummary';
@@ -6,9 +6,12 @@ import { MismatchTable } from './components/results/MismatchTable';
 import { MissingRowsTable } from './components/results/MissingRowsTable';
 import { ExportButtons } from './components/export/ExportButtons';
 import { compare } from './engine/comparator';
-import type { ParsedFile, ColumnMapping, ComparisonResult, WizardStep } from './types';
+import type { ParsedFile, ColumnMapping, ComparisonResult, WizardStep, ComparisonConfig } from './types';
 import { cn } from './utils/cn';
-import { ArrowLeft, GitCompareArrows } from 'lucide-react';
+import { ArrowLeft, GitCompareArrows, Loader2 } from 'lucide-react';
+
+// Use a Web Worker for large datasets to avoid blocking the UI thread.
+const WORKER_ROW_THRESHOLD = 50_000;
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'upload', label: 'Upload Files' },
@@ -26,22 +29,65 @@ function App() {
   const [trimWhitespace, setTrimWhitespace] = useState(true);
   const [numericTolerance, setNumericTolerance] = useState(0);
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [comparing, setComparing] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'mismatches' | 'missingTarget' | 'missingSource'>('mismatches');
+  const workerRef = useRef<Worker | null>(null);
 
   const canProceedToMapping = source !== null && target !== null;
 
   const handleCompare = useCallback(() => {
     if (!source || !target) return;
-    const compResult = compare(source.rows, target.rows, {
+
+    const config: ComparisonConfig = {
       mappings,
       keyColumns,
       caseSensitive,
       trimWhitespace,
       numericTolerance,
-    });
-    setResult(compResult);
-    setActiveTab('mismatches');
-    setStep('results');
+    };
+
+    const totalRows = source.rows.length + target.rows.length;
+    setCompareError(null);
+
+    if (totalRows > WORKER_ROW_THRESHOLD) {
+      // Terminate any previous worker still running
+      workerRef.current?.terminate();
+
+      setComparing(true);
+      const worker = new Worker(
+        new URL('./engine/comparator.worker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      workerRef.current = worker;
+
+      worker.onmessage = (e: MessageEvent<{ result?: ComparisonResult; error?: string }>) => {
+        setComparing(false);
+        worker.terminate();
+        workerRef.current = null;
+        if (e.data.error) {
+          setCompareError(e.data.error);
+        } else if (e.data.result) {
+          setResult(e.data.result);
+          setActiveTab('mismatches');
+          setStep('results');
+        }
+      };
+
+      worker.onerror = (err) => {
+        setComparing(false);
+        workerRef.current = null;
+        setCompareError(err.message ?? 'Comparison failed');
+      };
+
+      worker.postMessage({ sourceRows: source.rows, targetRows: target.rows, config });
+    } else {
+      // Small dataset — run synchronously on the main thread
+      const compResult = compare(source.rows, target.rows, config);
+      setResult(compResult);
+      setActiveTab('mismatches');
+      setStep('results');
+    }
   }, [source, target, mappings, keyColumns, caseSensitive, trimWhitespace, numericTolerance]);
 
   const handleReset = useCallback(() => {
@@ -168,7 +214,21 @@ function App() {
                 onCaseSensitiveChange={setCaseSensitive}
                 onTrimWhitespaceChange={setTrimWhitespace}
                 onNumericToleranceChange={setNumericTolerance}
+                comparing={comparing}
               />
+              {comparing && (
+                <div className="flex items-center gap-3 mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm text-primary">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <span>
+                    Comparing {source.rows.length.toLocaleString()} × {target.rows.length.toLocaleString()} rows in background…
+                  </span>
+                </div>
+              )}
+              {compareError && (
+                <div className="mt-4 p-4 bg-danger/5 border border-danger/20 rounded-lg text-sm text-danger">
+                  Comparison error: {compareError}
+                </div>
+              )}
             </div>
           )}
 

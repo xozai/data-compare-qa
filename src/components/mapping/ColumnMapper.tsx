@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowRight, Wand2, Key, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Wand2, Key, AlertTriangle, Loader2 } from 'lucide-react';
 import type { ColumnMapping, ParsedFile } from '../../types';
 import { cn } from '../../utils/cn';
 
@@ -11,6 +11,7 @@ interface ColumnMapperProps {
   onMappingsChange: (mappings: ColumnMapping[]) => void;
   onKeyColumnsChange: (keys: string[]) => void;
   onCompare: () => void;
+  comparing?: boolean;
   caseSensitive: boolean;
   trimWhitespace: boolean;
   numericTolerance: number;
@@ -27,6 +28,7 @@ export function ColumnMapper({
   onMappingsChange,
   onKeyColumnsChange,
   onCompare,
+  comparing = false,
   caseSensitive,
   trimWhitespace,
   numericTolerance,
@@ -65,6 +67,9 @@ export function ColumnMapper({
     const existing = mappings.filter((m) => m.sourceColumn !== sourceColumn);
     if (targetColumn) {
       existing.push({ sourceColumn, targetColumn });
+    } else {
+      // Mapping cleared — also remove from key columns to keep state consistent
+      onKeyColumnsChange(keyColumns.filter((k) => k !== sourceColumn));
     }
     onMappingsChange(existing);
   }
@@ -77,7 +82,7 @@ export function ColumnMapper({
     }
   }
 
-  const canCompare = mappings.length > 0 && keyColumns.length > 0;
+  const canCompare = mappings.length > 0 && keyColumns.length > 0 && !comparing;
 
   return (
     <div className="space-y-6">
@@ -238,13 +243,14 @@ export function ColumnMapper({
           onClick={onCompare}
           disabled={!canCompare}
           className={cn(
-            'px-6 py-2.5 rounded-lg font-medium text-sm transition-colors',
+            'flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm transition-colors',
             canCompare
               ? 'bg-primary text-white hover:bg-primary-dark'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
           )}
         >
-          Compare Datasets
+          {comparing && <Loader2 className="w-4 h-4 animate-spin" />}
+          {comparing ? 'Comparing…' : 'Compare Datasets'}
         </button>
       </div>
     </div>
